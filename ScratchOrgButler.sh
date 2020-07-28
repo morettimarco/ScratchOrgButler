@@ -1,6 +1,6 @@
 #!/bin/bash
 args=("$@")
-
+#tests
 SCRATCH_ORG_ALIAS="ScratchOrg"
 DEVHUB_ALIAS=""
 
