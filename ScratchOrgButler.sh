@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [ -z $@ ]
+if [ -z $@ ] &> /dev/null #This is a terrible cosmetic solution for the "too many arguments" problem
 then
-  echo "$0 requires arguments, use -h for help"
+  printf '\e[1;31m%-6s\e[m\n' "$0 requires arguments use -h for help"
   exit
 fi
 
-while getopts ":s:d:c" opt; do
+while getopts ":s:d:cp" opt; do
   case ${opt} in
     s )
       SCRATCH_ORG_ALIAS=$OPTARG
@@ -17,19 +17,19 @@ while getopts ":s:d:c" opt; do
     c )
       CREATE_SCRATCH=TRUE
       ;;
+    p )
+      DEPLOY_SOURCE=TRUE
+      ;;
     \? )
-      echo "Invalid option: $OPTARG" 1>&2
+      printf '\e[1;34m%-6s\e[m\n' "Invalid option: $OPTARG" 1>&2
+      exit
       ;;
     : )
-      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      printf '\e[1;34m%-6s\e[m\n' "Invalid option: $OPTARG requires an argument" 1>&2
       ;;
   esac
 done
 shift $((OPTIND -1))
-
-echo $SCRATCH_ORG_ALIAS
-echo $DEVHUB_ALIAS
-echo $CREATE_SCRATCH
 
 printf '\e[1;34m%-6s\e[m\n' "Hello, please wait while I'm fetching the managed package list from ${DEVHUB_ALIAS}..."
 
@@ -52,14 +52,14 @@ printf '\e[1;34m%-6s\e[m\n' "Thanks, I'll be right back with you scratch org..."
 printf '\e[1;31m%-6s\e[m\n' "##### DEFINE DEVHUB AS DEFAULT #####"
 sfdx force:config:set defaultusername=${DEVHUB_ALIAS}
 
-if [ $CREATE_SCRATCH = TRUE ]
+if [ "$CREATE_SCRATCH" = "TRUE" ]
 then 
   printf '\e[1;31m%-6s\e[m\n' "##### CREATING SCRATCH ORG #####"
   sfdx force:org:create -f config/project-scratch-def.json -a ${SCRATCH_ORG_ALIAS} -s -d 7
   if [ "$?" = "1" ] 
   then
-    printf '\e[1;31m%-6s\e[m\n' "I'm sorry, I can't create your scratch org."
-    printf '\e[1;31m%-6s\e[m\n' "Please authorize your dev hub with this command : #sfdx force:auth:web:login -d -a <DEVHUB_ALIAS>"
+    printf '\e[1;34m%-6s\e[m\n' "I'm sorry, I can't create your scratch org."
+    printf '\e[1;34m%-6s\e[m\n' "Please authorize your dev hub with this command : #sfdx force:auth:web:login -d -a <DEVHUB_ALIAS>"
     exit
   fi
  
@@ -94,5 +94,18 @@ rm UnlPack_List
 # space ( ) is set as delimiter
 IFS=' ' 
 
-printf '\e[1;31m%-6s\e[m\n' '##### PUSHING METADATA #####'
-sfdx force:source:push -u ${SCRATCH_ORG_ALIAS} -f
+if [ "$DEPLOY_SOURCE" = "TRUE" ]
+then
+  printf '\e[1;31m%-6s\e[m\n' '##### PUSHING METADATA #####'
+  sfdx force:source:push -u ${SCRATCH_ORG_ALIAS} -f
+fi
+
+printf '\e[1;34m%-6s\e[m\n' "Scratch org created!!"
+read -rp "Do you want to login? (y/n)" login_choice
+
+if [ "${login_choice}" = "Y" ] || [ "${login_choice}" = "y" ]
+then
+  sfdx force:org:open -u ${SCRATCH_ORG_ALIAS}
+fi
+
+sfdx force:config:set defaultusername=${SCRATCH_ORG_ALIAS} > /dev/null
