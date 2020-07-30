@@ -1,17 +1,35 @@
 #!/bin/bash
-args=("$@")
 
-SCRATCH_ORG_ALIAS="ScratchOrg"
-DEVHUB_ALIAS=""
-
-if [ $# -gt 1 ]
-  then
-    SCRATCH_ORG_ALIAS=$2
-    DEVHUB_ALIAS=$1
-  else  
-  printf '\e[1;31m%-6s\e[m\n' "USAGE : $0 <DEVHUB_ALIAS> <SCRATCH_ORG_ALIAS>"
+if [ -z $@ ]
+then
+  echo "$0 requires arguments, use -h for help"
   exit
 fi
+
+while getopts ":s:d:c" opt; do
+  case ${opt} in
+    s )
+      SCRATCH_ORG_ALIAS=$OPTARG
+      ;;
+    d )
+      DEVHUB_ALIAS=$OPTARG
+      ;;
+    c )
+      CREATE_SCRATCH=TRUE
+      ;;
+    \? )
+      echo "Invalid option: $OPTARG" 1>&2
+      ;;
+    : )
+      echo "Invalid option: $OPTARG requires an argument" 1>&2
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+
+echo $SCRATCH_ORG_ALIAS
+echo $DEVHUB_ALIAS
+echo $CREATE_SCRATCH
 
 printf '\e[1;34m%-6s\e[m\n' "Hello, please wait while I'm fetching the managed package list from ${DEVHUB_ALIAS}..."
 
@@ -34,30 +52,32 @@ printf '\e[1;34m%-6s\e[m\n' "Thanks, I'll be right back with you scratch org..."
 printf '\e[1;31m%-6s\e[m\n' "##### DEFINE DEVHUB AS DEFAULT #####"
 sfdx force:config:set defaultusername=${DEVHUB_ALIAS}
 
-printf '\e[1;31m%-6s\e[m\n' "##### CREATING SCRATCH ORG #####"
-sfdx force:org:create -f config/project-scratch-def.json -a ${SCRATCH_ORG_ALIAS} -s -d 7
+if [ $CREATE_SCRATCH = TRUE ]
+then 
+  printf '\e[1;31m%-6s\e[m\n' "##### CREATING SCRATCH ORG #####"
+  sfdx force:org:create -f config/project-scratch-def.json -a ${SCRATCH_ORG_ALIAS} -s -d 7
+  if [ "$?" = "1" ] 
+  then
+    printf '\e[1;31m%-6s\e[m\n' "I'm sorry, I can't create your scratch org."
+    printf '\e[1;31m%-6s\e[m\n' "Please authorize your dev hub with this command : #sfdx force:auth:web:login -d -a <DEVHUB_ALIAS>"
+    exit
+  fi
+ 
+  printf '\e[1;31m%-6s\e[m\n' "##### Scratch org created. #####"
 
-if [ "$?" = "1" ] 
-then
-	printf '\e[1;31m%-6s\e[m\n' "I'm sorry, I can't create your scratch org."
-  printf '\e[1;31m%-6s\e[m\n' "Please authorize your dev hub with this command : #sfdx force:auth:web:login -d -a <DEVHUB_ALIAS>"
-	exit
+  printf '\e[1;31m%-6s\e[m\n' "##### GENERATE PASSWORD #####"
+  sfdx force:user:password:generate -u ${SCRATCH_ORG_ALIAS}
+
+  printf '\e[1;31m%-6s\e[m\n' "Please, note down this password"
+  sfdx force:org:display -u ${SCRATCH_ORG_ALIAS}
 fi
-
-printf '\e[1;31m%-6s\e[m\n' "##### Scratch org created. #####"
-
-printf '\e[1;31m%-6s\e[m\n' "##### GENERATE PASSWORD #####"
-sfdx force:user:password:generate -u ${SCRATCH_ORG_ALIAS}
-
-printf '\e[1;31m%-6s\e[m\n' "Please, note down this password"
-sfdx force:org:display -u ${SCRATCH_ORG_ALIAS}
 
 #INSTALL THE MANAGED PACKAGES
 IFS=',' # comma (,) is set as delimiter
 for ManPackageName in $ManPackage_List
 do
   printf '\e[1;31m%-6s\e[m\n' "##### INSTALLING $ManPackageName #####"
-  ManPackageVer=$(cat ManPack_List | jq -c --arg ManPackageName "$ManPackageName" '.result[] | select(.SubscriberPackageName==$ManPackageName)'| tail -1 | jq -r '.SubscriberPackageVersionId')
+  ManPackageVer=$(cat ManPack_List | jq -r --arg ManPackageName "$ManPackageName" '[.result[] | select(.SubscriberPackageName==$ManPackageName)] | .[-1] | .SubscriberPackageVersionId')
   sfdx force:package:install --wait 10 --publishwait 10 --package $ManPackageVer --noprompt -u ${SCRATCH_ORG_ALIAS} > Log_$ManPackageName.Butlog
 done
 rm ManPack_List
@@ -66,7 +86,7 @@ rm ManPack_List
 for UnlPackageName in $UnlPackage_List
 do
   printf '\e[1;31m%-6s\e[m\n' "##### INSTALLING $UnlPackageName #####"
-  UnlPackageVer=$(cat UnlPack_List | jq -c --arg UnlPackageName "$UnlPackageName" '.result[] | select(.Package2Name==$UnlPackageName)'| tail -1 | jq -r '.SubscriberPackageVersionId')
+  UnlPackageVer=$(cat UnlPack_List | jq -r --arg UnlPackageName "$UnlPackageName" '[.result[] | select(.Package2Name==$UnlPackageName)] | .[-1] | .SubscriberPackageVersionId')
   sfdx force:package:install --wait 10 --publishwait 10 --package $UnlPackageVer --noprompt -u ${SCRATCH_ORG_ALIAS} > Log_$UnlPackageName.Butlog
 done
 rm UnlPack_List
