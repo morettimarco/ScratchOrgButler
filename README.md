@@ -3,7 +3,8 @@
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 
-- Setup
-- Usage
-- Known issues
-- Coming (possible) features
+- [Installation](#installation)
+- [Features](#features)
+- [Issues](#issues)
+- [Coming up](#comingfeatures)
+
