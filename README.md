@@ -76,6 +76,11 @@ This command will create a **TestButler** scratch org allow and install packages
 $ ./ScratchOrgButler.sh -s TestButler -d DevHub -c -p
 ```
 
+This command will push your code on **TestButler** scratch org
+```shell
+$ ./ScratchOrgButler.sh -s TestButler -d DevHub -p
+```
+
 Coming Features
 ============
 - Customer cloning (takes an account from an org and clones it to the scracth org)
