@@ -6,7 +6,7 @@ then
   exit
 fi
 
-while getopts ":s:d:cp" opt; do
+while getopts ":s:d:cph" opt; do
   case ${opt} in
     s )
       SCRATCH_ORG_ALIAS=$OPTARG
@@ -19,6 +19,11 @@ while getopts ":s:d:cp" opt; do
       ;;
     p )
       DEPLOY_SOURCE=TRUE
+      ;;
+    h )
+      printf '\e[1;34m%-6s\e[m\n' "Hello! I support the following parameters:"
+      printf '\t%s\n' "-s scratch org name" "-d DevHub name" "-c creates scratch (don't specify if you just want to install packages)" "-p push source to you scratch org"
+      exit
       ;;
     \? )
       printf '\e[1;34m%-6s\e[m\n' "Invalid option: $OPTARG" 1>&2
@@ -36,7 +41,7 @@ printf '\e[1;34m%-6s\e[m\n' "Hello, please wait while I'm fetching the managed p
 ## DEFINE THE LIST OF MANAGED PACKAGES TO INSTALL
 sfdx force:package:installed:list -u ${DEVHUB_ALIAS} --json > ManPack_List
 printf '\e[1;31m%-6s\e[m\n' "##### PICK MANAGED PACKAGES TO INSTALL #####"
-cat ManPack_List | jq -r '.result[].SubscriberPackageName' | sort | uniq
+jq -r '[.result[].SubscriberPackageName] | sort | unique | .[]' ManPack_List
 read -rp "Please pick the packages you want me to install (separated by comma):" ManPackage_List
 
 printf '\e[1;34m%-6s\e[m\n' "Thanks,now I'm fetching the unlocked package list from ${DEVHUB_ALIAS}..."
@@ -44,7 +49,7 @@ printf '\e[1;34m%-6s\e[m\n' "Thanks,now I'm fetching the unlocked package list f
 ## DEFINE THE LIST OF UNLOCKED PACKAGES TO INSTALL
 sfdx force:package:version:list --json > UnlPack_List
 printf '\e[1;31m%-6s\e[m\n' "##### PICK UNLOCKED PACKAGES TO INSTALL #####"
-cat UnlPack_List | jq -r '.result[].Package2Name'| sort | uniq
+jq -r '[.result[].Package2Name] | sort | unique | .[]' UnlPack_List
 read -rp "Please pick the packages you want me to install:" UnlPackage_List
 
 printf '\e[1;34m%-6s\e[m\n' "Thanks, I'll be right back with you scratch org..."
