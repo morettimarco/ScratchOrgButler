@@ -3,8 +3,30 @@
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 
-- [Installation](#installation)
-- [Features](#features)
-- [Issues](#issues)
-- [Coming up](#comingfeatures)
 
+Table of contents
+=================
+
+<!--ts-->
+   * [Table of contents](#table-of-contents)
+   * [Installation](#installation)
+   * [Usage](#usage)
+   * [Coming Features](#coming-features)
+   * [Known Issues](#known-issues)
+   * [Contacts](#contacts)
+<!--te-->
+
+Installation
+============
+
+Usage
+============
+
+Coming Features
+============
+
+Known Issues
+============
+
+Contacts
+============
