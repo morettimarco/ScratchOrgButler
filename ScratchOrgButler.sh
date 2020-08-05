@@ -74,7 +74,7 @@ then
     if [ "${DeleteAnswer}" = "Y" ] || [ "${DeleteAnswer}" = "y" ]
     then
       chatter LOG "##### DELETING ${SCRATCH_ORG_ALIAS} #####"
-      sfdx force:org:delete -u ${SCRATCH_ORG_ALIAS}
+      sfdx force:org:delete -p -u ${SCRATCH_ORG_ALIAS}
 
       chatter LOG "##### CREATING SCRATCH ORG #####"
       sfdx force:org:create -f config/project-scratch-def.json -a ${SCRATCH_ORG_ALIAS} -s -d 7
@@ -83,7 +83,9 @@ then
       chatter LOG "##### GENERATE PASSWORD #####"
       sfdx force:user:password:generate -u ${SCRATCH_ORG_ALIAS}
       chatter LOG "Please, note down this password"
-      sfdx force:org:display -u ${SCRATCH_ORG_ALIAS}
+      read -r URL USER PASSWORD <<< $(sfdx force:org:display -u ${SCRATCH_ORG_ALIAS} --json | jq -r '[.result.instanceUrl, .result.username, .result.password] | @tsv ')
+      printf '%10s\t%s\n' "USERNAME:" "$USER" "PASSWORD:" "$PASSWORD" "URL:" "$URL"
+      
     else 
       chatter ERR "I'm sorry, I can't create your scratch org, rerun the script without the -c option"
       exit
@@ -97,7 +99,8 @@ then
       chatter LOG "##### GENERATE PASSWORD #####"
       sfdx force:user:password:generate -u ${SCRATCH_ORG_ALIAS}
       chatter LOG "Please, note down this password"
-      sfdx force:org:display -u ${SCRATCH_ORG_ALIAS}
+      read -r URL USER PASSWORD <<< $(sfdx force:org:display -u ${SCRATCH_ORG_ALIAS} --json | jq -r '[.result.instanceUrl, .result.username, .result.password] | @tsv ')
+      printf '%10s\t%s\n' "USERNAME:" "$USER" "PASSWORD:" "$PASSWORD" "URL:" "$URL"
   fi 
 
   if [ "$?" = "1" ] 
@@ -147,12 +150,10 @@ fi
 
 sfdx force:config:set defaultusername=${SCRATCH_ORG_ALIAS} > /dev/null
 
-
 #Authorize org
-#   read -r URL USER PASSWORD <<< $(sfdx force:org:display --json | jq -r '[.result.instanceUrl, .result.username, .result.password] | @tsv ')
-#   sfdx force:auth:web:login --setalias ${SCRATCH_ORG_ALIAS} --instanceurl ${URL} --setdefaultusername
+if [ "$TERM_PROGRAM" == "vscode"  ]
+ then
+   sfdx force:auth:web:login --setalias ${SCRATCH_ORG_ALIAS} --instanceurl ${URL} --setdefaultusername
 #Restart VSCODE
-# if [ "$TERM_PROGRAM" == "vscode"  ]
-# then
-#   nohup osascript -e 'tell application "Visual Studio Code"' -e 'quit' -e 'delay 2' -e 'activate' -e 'end tell' &
-# fi
+   nohup osascript -e 'tell application "Visual Studio Code"' -e 'quit' -e 'delay 2' -e 'activate' -e 'end tell' &
+fi
