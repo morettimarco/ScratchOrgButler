@@ -65,10 +65,13 @@ if [ "$CREATE_SCRATCH" = "TRUE" ]
 then 
   scratchorgcount=$(sfdx force:org:list --json | jq -r --arg SCRATCH_ORG_ALIAS "$SCRATCH_ORG_ALIAS" '[.result.scratchOrgs[] | select(.alias==$SCRATCH_ORG_ALIAS)]| length')
   
+  # TO TEST - MAY OVERCOME THE PROBLEM OF SCRATCH ORGS LOOKING LIKE DEV ORGS 
+  # sfdx force:org:display -u "$SCRATCH_ORG_ALIAS" > /dev/null
+  # scratchorgcount = %?
+  
   if [ $scratchorgcount -gt 0 ]
   then
-    chatter LOG "There is an already existing scratch org called $SCRATCH_ORG_ALIAS"
-    notifier "WARNING: Already existing scratch org"
+    chatter WARN "WARNING: Already existing scratch org named $SCRATCH_ORG_ALIAS"
     read -rp "Would you like to recreate it?" DeleteAnswer
 
     if [ "${DeleteAnswer}" = "Y" ] || [ "${DeleteAnswer}" = "y" ]
