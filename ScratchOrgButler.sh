@@ -1,6 +1,6 @@
 #!/bin/bash
 source logger.sh 
-
+ 
 if [ -z $@ ] &> /dev/null #This is a terrible cosmetic solution for the "too many arguments" problem
 then
   chatter WARN "$0 requires arguments use -h for help"
@@ -63,15 +63,17 @@ sfdx force:config:set defaultusername=${DEVHUB_ALIAS}
 
 if [ "$CREATE_SCRATCH" = "TRUE" ]
 then 
-  scratchorgcount=$(sfdx force:org:list --json | jq -r --arg SCRATCH_ORG_ALIAS "$SCRATCH_ORG_ALIAS" '[.result.scratchOrgs[] | select(.alias==$SCRATCH_ORG_ALIAS)]| length')
+  #scratchorgcount=$(sfdx force:org:list --json | jq -r --arg SCRATCH_ORG_ALIAS "$SCRATCH_ORG_ALIAS" '[.result.scratchOrgs[] | select(.alias==$SCRATCH_ORG_ALIAS)]| length')
   
-  # TO TEST - MAY OVERCOME THE PROBLEM OF SCRATCH ORGS LOOKING LIKE DEV ORGS 
+  # TO TEST - MAY OVERCOME THE PROBLEM OF SCRATCH ORGS LOOKING LIKE DEV ORGS
+  read -r URL USER PASSWORD <<< $(sfdx force:org:display -u ${SCRATCH_ORG_ALIAS} --json | jq -r '[.result.instanceUrl, .result.username, .result.password] | @tsv ') 
   # sfdx force:org:display -u "$SCRATCH_ORG_ALIAS" > /dev/null
-  # scratchorgcount = %?
+  # scratchorgcount = $?
   
-  if [ $scratchorgcount -gt 0 ]
+  if [ "$URL" != "" ]
   then
     chatter WARN "WARNING: Already existing scratch org named $SCRATCH_ORG_ALIAS"
+    printf '\e[1;31m%10s\e[0m\t%s\n' "USERNAME:" "$USER" "PASSWORD:" "$PASSWORD" "URL:" "$URL"
     read -rp "Would you like to recreate it?" DeleteAnswer
 
     if [ "${DeleteAnswer}" = "Y" ] || [ "${DeleteAnswer}" = "y" ]
@@ -87,7 +89,7 @@ then
       sfdx force:user:password:generate -u ${SCRATCH_ORG_ALIAS}
       chatter LOG "Please, note down this password"
       read -r URL USER PASSWORD <<< $(sfdx force:org:display -u ${SCRATCH_ORG_ALIAS} --json | jq -r '[.result.instanceUrl, .result.username, .result.password] | @tsv ')
-      printf '%10s\t%s\n' "USERNAME:" "$USER" "PASSWORD:" "$PASSWORD" "URL:" "$URL"
+      printf '\e[1;31m%10s\e[0m\t%s\n' "USERNAME:" "$USER" "PASSWORD:" "$PASSWORD" "URL:" "$URL"
       
     else 
       chatter ERR "I'm sorry, I can't create your scratch org, rerun the script without the -c option"
@@ -128,6 +130,7 @@ rm ManPack_List
 for UnlPackageName in $UnlPackage_List
 do
   chatter LOG "##### INSTALLING $UnlPackageName #####"
+  #read -r UnlPackageVer UnlPackageDate UnlPackageVerNum <<< $(cat UnlPack_List | jq -r --arg UnlPackageName "$UnlPackageName" '[.result[] | select(.Package2Name==$UnlPackageName)] | .[-1] | [.SubscriberPackageVersionId,.CreatedDate, .Version] | @csv')
   UnlPackageVer=$(cat UnlPack_List | jq -r --arg UnlPackageName "$UnlPackageName" '[.result[] | select(.Package2Name==$UnlPackageName)] | .[-1] | .SubscriberPackageVersionId')
   sfdx force:package:install --wait 10 --publishwait 10 --package $UnlPackageVer --noprompt -u ${SCRATCH_ORG_ALIAS} > Log_$UnlPackageName.Butlog
 done
@@ -158,5 +161,7 @@ if [ "$TERM_PROGRAM" == "vscode"  ]
  then
    sfdx force:auth:web:login --setalias ${SCRATCH_ORG_ALIAS} --instanceurl ${URL} --setdefaultusername
 #Restart VSCODE
-   nohup osascript -e 'tell application "Visual Studio Code"' -e 'quit' -e 'delay 2' -e 'activate' -e 'end tell' &
+   nohup osascript -e 'tell application "Visual Studio Code"' -e 'quit' -e 'delay 2' -e 'activate' -e 'end tell' > /dev/null &
 fi
+
+#read -r UnlPackageVer UnlPackageDate UnlPackageVerNum <<<$(cat UnlPack_List2 | jq -r --arg UnlPackageName "LEAP_DN_Package" '[.result[] | select(.Package2Name==$UnlPackageName)] | .[-1] | [.SubscriberPackageVersionId, .CreatedDate, .Version] | join(",")')
