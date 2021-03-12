@@ -42,6 +42,15 @@ chatter LOG "Hello, please wait while I'm fetching the managed package list from
 
 ## DEFINE THE LIST OF MANAGED PACKAGES TO INSTALL
 sfdx force:package:installed:list -u ${DEVHUB_ALIAS} --json > ManPack_List
+
+## Traps error ##
+if [ $? -ne 0 ]
+then
+	error=$(jq -r '.message' < ManPack_List)
+	chatter ERR "Error! $error"
+	exit;
+fi
+
 chatter LOG "##### PICK MANAGED PACKAGES TO INSTALL #####"
 jq -r '[.result[].SubscriberPackageName] | sort | unique | .[]' ManPack_List
 notifier "Managed package list ready!"
